@@ -48,7 +48,7 @@ Como o banco de dados sqflite é focado em armazenamento nativo mobile, o projet
 
 Clone o repositório:
 ```
-   git clone [https://github.com/AndrielsonLTeza/academic_management.git](https://github.com/AndrielsonLTeza/academic_management.git)
+   git clone [https://github.com/AndrielsonLTeza/academic_management2.git](https://github.com/AndrielsonLTeza/academic_management2.git)
    cd academic_management
 ```
 Instale as dependências do Flutter:
