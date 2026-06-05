@@ -18,34 +18,26 @@ class AppDatabase {
   }
 
   Future<void> _onCreate(Database db, int version) async {
+    // Tabela de Cursos
     await db.execute('''
-      CREATE TABLE courses (
-        courseId INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        duration INTEGER NOT NULL,
-        coordinator TEXT NOT NULL,
-        description TEXT NOT NULL
-      )
-    ''');
-    //Tabela de estudantes
+    CREATE TABLE courses (
+      courseId INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      duration INTEGER NOT NULL,
+      coordinator TEXT NOT NULL,
+      description TEXT NOT NULL
+    )
+  ''');
+
+    // TABELA DE ALUNOS ATUALIZADA (Com interligação)
     await db.execute('''
     CREATE TABLE students (
       studentId INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
-      email TEXT NOT NULL,
       ra TEXT NOT NULL,
+      email TEXT NOT NULL,
       courseId INTEGER,
       FOREIGN KEY (courseId) REFERENCES courses (courseId) ON DELETE SET NULL
-    )
-  ''');
-
-    // Tabela de Professores
-    await db.execute('''
-    CREATE TABLE teachers (
-      teacherId INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      email TEXT NOT NULL,
-      subject TEXT NOT NULL
     )
   ''');
   }

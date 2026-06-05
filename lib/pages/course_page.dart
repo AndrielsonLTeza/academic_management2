@@ -209,7 +209,7 @@ class _CoursePageState extends State<CoursePage> {
     );
   }
 
-  // ==================== ABA DE ALUNOS (FUNCIONALIDADE BÔNUS IA) ====================
+  // ==================== ABA DE ALUNOS (COM INTERLIGAÇÃO VISUAL) ====================
   Widget _buildStudentTab() {
     return Scaffold(
       body: _studentController.students.isEmpty
@@ -218,9 +218,24 @@ class _CoursePageState extends State<CoursePage> {
               itemCount: _studentController.students.length,
               itemBuilder: (context, index) {
                 final aluno = _studentController.students[index];
+
+                // INTERLIGAÇÃO: Busca na lista de cursos qual possui o ID igual ao do aluno
+                final cursoVinculado = _courseController.courses.firstWhere(
+                  (c) => c.courseId == aluno.courseId,
+                  orElse: () => Course(
+                    name: 'Nenhum curso associado',
+                    duration: 0,
+                    coordinator: '',
+                    description: '',
+                  ),
+                );
+
                 return ListTile(
                   title: Text(aluno.name),
-                  subtitle: Text('RA: ${aluno.ra} | Email: ${aluno.email}'),
+                  // Exibe os dados do Aluno E o Curso interligado dinamicamente
+                  subtitle: Text(
+                    'RA: ${aluno.ra} | Email: ${aluno.email}\nCurso: ${cursoVinculado.name}',
+                  ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -247,6 +262,13 @@ class _CoursePageState extends State<CoursePage> {
   }
 
   void _mostrarFormularioAluno({Student? student}) {
+    // Define qual curso virá pré-selecionado no dropdown
+    int? cursoSelecionadoId =
+        student?.courseId ??
+        (_courseController.courses.isNotEmpty
+            ? _courseController.courses.first.courseId
+            : null);
+
     if (student != null) {
       _studentNameController.text = student.name;
       _studentRaController.text = student.ra;
@@ -260,66 +282,100 @@ class _CoursePageState extends State<CoursePage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (_) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-          top: 20,
-          left: 20,
-          right: 20,
-        ),
-        child: Form(
-          key: _studentFormKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                student == null ? 'Cadastrar Aluno' : 'Editar Aluno',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+      builder: (_) => StatefulBuilder(
+        // Permite atualizar a seleção do dropdown dentro do modal bottom sheet
+        builder: (context, setModalState) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+            top: 20,
+            left: 20,
+            right: 20,
+          ),
+          child: Form(
+            key: _studentFormKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  student == null ? 'Cadastrar Aluno' : 'Editar Aluno',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              TextFormField(
-                controller: _studentNameController,
-                decoration: const InputDecoration(labelText: 'Nome do Aluno'),
-                validator: (v) => v!.isEmpty ? 'Campo obrigatório' : null,
-              ),
-              TextFormField(
-                controller: _studentRaController,
-                decoration: const InputDecoration(
-                  labelText: 'Registro Acadêmico (RA)',
+                TextFormField(
+                  controller: _studentNameController,
+                  decoration: const InputDecoration(labelText: 'Nome do Aluno'),
+                  validator: (v) => v!.isEmpty ? 'Campo obrigatório' : null,
                 ),
-                validator: (v) => v!.isEmpty ? 'Campo obrigatório' : null,
-              ),
-              TextFormField(
-                controller: _studentEmailController,
-                decoration: const InputDecoration(labelText: 'E-mail'),
-                validator: (v) => v!.isEmpty ? 'Campo obrigatório' : null,
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () async {
-                  if (_studentFormKey.currentState!.validate()) {
-                    final novoAluno = Student(
-                      studentId: student?.studentId,
-                      name: _studentNameController.text,
-                      ra: _studentRaController.text,
-                      email: _studentEmailController.text,
-                    );
-                    if (student == null) {
-                      await _studentController.adicionarAluno(novoAluno);
-                    } else {
-                      await _studentController.atualizarAluno(novoAluno);
+                TextFormField(
+                  controller: _studentRaController,
+                  decoration: const InputDecoration(
+                    labelText: 'Registro Acadêmico (RA)',
+                  ),
+                  validator: (v) => v!.isEmpty ? 'Campo obrigatório' : null,
+                ),
+                TextFormField(
+                  controller: _studentEmailController,
+                  decoration: const InputDecoration(labelText: 'E-mail'),
+                  validator: (v) => v!.isEmpty ? 'Campo obrigatório' : null,
+                ),
+
+                const SizedBox(height: 15),
+                // DROPDOWN PARA INTERLIGAÇÃO DE CURSO
+                _courseController.courses.isEmpty
+                    ? const Text(
+                        'Cadastre um curso na aba Cursos antes de adicionar alunos!',
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      )
+                    : DropdownButtonFormField<int>(
+                        value: cursoSelecionadoId,
+                        decoration: const InputDecoration(
+                          labelText: 'Curso Vinculado',
+                        ),
+                        items: _courseController.courses.map((curso) {
+                          return DropdownMenuItem<int>(
+                            value: curso.courseId,
+                            child: Text(curso.name),
+                          );
+                        }).toList(),
+                        onChanged: (novoId) {
+                          setModalState(() {
+                            cursoSelecionadoId = novoId;
+                          });
+                        },
+                      ),
+
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (_studentFormKey.currentState!.validate()) {
+                      final novoAluno = Student(
+                        studentId: student?.studentId,
+                        name: _studentNameController.text,
+                        ra: _studentRaController.text,
+                        email: _studentEmailController.text,
+                        courseId:
+                            cursoSelecionadoId, // Vincula o ID do curso selecionado no banco
+                      );
+                      if (student == null) {
+                        await _studentController.adicionarAluno(novoAluno);
+                      } else {
+                        await _studentController.atualizarAluno(novoAluno);
+                      }
+                      Navigator.pop(context);
+                      setState(() {});
+                      _exibirSnackBar('Operação realizada no aluno!');
                     }
-                    Navigator.pop(context);
-                    setState(() {});
-                    _exibirSnackBar('Operação realizada no aluno!');
-                  }
-                },
-                child: Text(student == null ? 'Salvar' : 'Atualizar'),
-              ),
-              const SizedBox(height: 20),
-            ],
+                  },
+                  child: Text(student == null ? 'Salvar' : 'Atualizar'),
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
           ),
         ),
       ),
